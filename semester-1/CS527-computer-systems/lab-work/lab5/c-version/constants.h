@@ -1,0 +1,27 @@
+
+#ifndef LAB5_CONSTANTS_H
+#define LAB5_CONSTANTS_H
+
+#include <stdint.h>
+
+#define KEYBOARD_BASE 0xFFFF0000u
+#define DISPLAY_BASE 0xFFFF0100u
+#define DISPLAY_END 0xFFFF02FFu
+#define ALARM_ADDR 0xFFFF0300u
+#define BUTTON_ADDR 0xFFFF0301u
+
+#define KEYBOARD_MEM_BYTES 128u
+#define DISPLAY_MEM_BYTES 512u
+#define ALARM_MEM_BYTES 1u
+#define BUTTON_MEM_BYTES 1u
+
+#define MAX_DATA_LEN 255u
+
+#define CRC16_POLY 0x1021u
+#define CRC16_INIT 0xFFFFu
+
+#define DEFAULT_MAX_RETRIES 3
+
+#define BUS_ERROR_PROB 0.001
+
+#endif
