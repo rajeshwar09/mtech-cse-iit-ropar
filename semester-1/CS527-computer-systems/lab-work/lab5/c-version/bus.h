@@ -1,16 +1,10 @@
-
-#ifndef BUS_H
-#define BUS_H
-
-#include <stdint.h>
+#pragma once
 #include "frame.h"
+#include "devices.h"
 
-// Four devices (keyboard, display, alarm, button) are implicitly connected.
-// The bus routes by absolute memory address per constants.h.
-typedef struct Bus Bus;
-struct Bus{ int dummy; };
+typedef struct Bus {
+  Device devices[DEV_COUNT];
+} Bus;
 
 void bus_init(Bus* b);
-int  bus_send(Bus* b, const frame_t* req, frame_t* resp); // 1=ACK, 0=NACK
-
-#endif
+int  bus_send(Bus* b, const frame_t* req, frame_t* resp); /* 1=ACK, 0=NACK */

@@ -1,24 +1,20 @@
-# Makefile for CS527 Lab 4
-
 CC      = gcc
-CFLAGS  = -std=c11 -Wall -Wextra -O2 -MMD -MP
+CFLAGS  = -Wall -Wextra -std=c11 -O2
+OBJS    = main.o app.o bus.o devices.o frame.o crc16.o
 
-OBJS    = app.o bus.o crc16.o devices.o frame.o logger.o main.o
-DEPS    = $(OBJS:.o=.d)
-BIN     = lab5
-STATE_DIR = .lab5state
+all: lab5
 
-all: $(BIN)
-
-$(BIN): $(OBJS)
+lab5: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+main.o: main.c app.h constants.h
+app.o: app.c app.h bus.h frame.h constants.h
+bus.o: bus.c bus.h devices.h frame.h constants.h
+devices.o: devices.c devices.h constants.h
+frame.o: frame.c frame.h constants.h crc16.h
+crc16.o: crc16.c crc16.h
 
 clean:
-	rm -rf $(OBJS) $(DEPS) $(BIN) $(STATE_DIR)
+	rm -f *.o lab5
 
 .PHONY: all clean
-
--include $(DEPS)

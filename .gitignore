@@ -5,3 +5,6 @@
 
 executable
 *.prob
+.vscode
+
+CS539-IOT/

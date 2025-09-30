@@ -1,27 +1,31 @@
-
-#ifndef LAB5_CONSTANTS_H
-#define LAB5_CONSTANTS_H
-
+#pragma once
 #include <stdint.h>
+#include <stddef.h>
 
-#define KEYBOARD_BASE 0xFFFF0000u
-#define DISPLAY_BASE 0xFFFF0100u
-#define DISPLAY_END 0xFFFF02FFu
-#define ALARM_ADDR 0xFFFF0300u
-#define BUTTON_ADDR 0xFFFF0301u
+/* ----- Device address map (per Lab-5 PDF) ----- */
+#define KEYBOARD_BASE       0xFFFF0000u
+#define KEYBOARD_MEM_BYTES  128u
 
-#define KEYBOARD_MEM_BYTES 128u
-#define DISPLAY_MEM_BYTES 512u
-#define ALARM_MEM_BYTES 1u
-#define BUTTON_MEM_BYTES 1u
+#define DISPLAY_BASE        0xFFFF0100u
+#define DISPLAY_MEM_BYTES   512u          /* addresses [0xFFFF0100 .. 0xFFFF02FF] */
 
-#define MAX_DATA_LEN 255u
+#define ALARM_ADDR          0xFFFF0300u   /* 1 byte */
+#define ALARM_MEM_BYTES     1u
 
-#define CRC16_POLY 0x1021u
-#define CRC16_INIT 0xFFFFu
+#define BUTTON_ADDR         0xFFFF0301u   /* 1 byte */
+#define BUTTON_MEM_BYTES    1u
 
-#define DEFAULT_MAX_RETRIES 3
+/* Packet fields (protocol same as Lab-4) */
+typedef enum { PKT_DATA = 0, PKT_ACK = 1 } packet_type_t;
+typedef enum { REQ_READ = 0, REQ_WRITE = 1 } request_type_t;
 
-#define BUS_ERROR_PROB 0.001
+/* Protocol limits */
+#define FRAME_DATA_MAX      255u
 
+/* Utility min/max */
+#ifndef MIN
+#define MIN(a,b) ((a)<(b)?(a):(b))
+#endif
+#ifndef MAX
+#define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
