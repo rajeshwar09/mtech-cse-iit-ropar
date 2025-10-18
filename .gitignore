@@ -8,3 +8,5 @@ executable
 .vscode
 
 CS539-IOT/
+
+*.bin
