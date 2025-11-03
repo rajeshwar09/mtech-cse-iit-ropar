@@ -5,7 +5,8 @@
 
 using namespace std;
 
-const long INF = 9999999;
+// safe side taken large value
+const long long INF = 1000000000000000000LL;
 
 struct Edge {
   int u, v;
@@ -109,23 +110,29 @@ vector<int> topological_sort(const vector<vector<long long>>& matrix, int N) {
     }
   }
 
-  priority_queue<int> min_heap;
+
+  // UNCOMMENT LINE TO VERIFY THE CODE
+  // BY DEFAULT: taking min-heap (to get lexographically smallest)
+  // priority_queue that pops the smallest label first (as per instruction of assignment):
+  priority_queue<int, vector<int>, greater<int>> pq;
+  // priority_queue that pops the largest label first (as per input/ouput given in assignment):
+  // priority_queue<int> pq;
 
   for (int v = 0; v < N; v++) {
     if (in_degrees[v] == 0) {
-      min_heap.push(v);
+      pq.push(v);
     }
   }
 
-  while (!min_heap.empty()) {
-    int u = min_heap.top();
-    min_heap.pop();
+  while (!pq.empty()) {
+    int u = pq.top();
+    pq.pop();
     order.push_back(u);
 
     for (int v = 0; v < N; v++) {
       if (matrix[u][v] == 1) {
         in_degrees[v]--;
-        if (in_degrees[v] == 0) min_heap.push(v);
+        if (in_degrees[v] == 0) pq.push(v);
       }
     }
   }
@@ -157,7 +164,8 @@ vector<long long> dijkstra_algorithm(const vector<vector<Adj_Node>>& list, int N
   pq.push({0, s});
 
   while (!pq.empty()) {
-    auto [dist_u, u] = pq.top();
+    auto dist_u = pq.top().first;
+    auto u = pq.top().second;
     pq.pop();
 
     if (dist_u != distance[u]) continue;
