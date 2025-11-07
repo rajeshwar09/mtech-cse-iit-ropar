@@ -1,10 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <queue>
-#include <unordered_map>
 #include <algorithm>
 #include <map>
-#include <unordered_set>
 #include <deque>
 #include <string>
 #include <array>
@@ -258,7 +256,7 @@ Arborescence_Findings min_arborescence(const vector<Edge>& edges, int N, int s) 
     edge_list.push_back(de);
   }
 
-  // 4 running DMST on 0-index to chose incoming edge index for every vertex
+  // 4 running DMST on 1-index to chose incoming edge index for every vertex
   vector<int> chosen_index = dmst(edge_list, N, s);
 
   vector<int> parent(N+1, -1);
@@ -384,7 +382,6 @@ void arb_solution() {
 }
 
 // =============================================================================
-
 // 2. HUFFMAN ==================================================================
 
 // to build tree
@@ -573,6 +570,144 @@ void huff_sol() {
 }
 
 
+// =============================================================================
+// 2. MAX FLOW =================================================================
+
+// struct to store data
+struct MaxFlow_Result {
+  long long max_flow;
+  vector<vector<long long>> residual;
+  vector<vector<int>> adj;
+  vector<int> parent;
+  vector<int> reachable;
+};
+
+struct BFS_Result {
+  long long bottleneck;
+  vector<int> parent;
+};
+
+// create augment graph using bfs
+BFS_Result mf_bfs(const vector<vector<int>>& adj, const vector<vector<long long>>& capacity, int N, int s, int t) {
+  BFS_Result res;
+  res.bottleneck = 0;
+  res.parent.assign(N+1, -1);
+  res.parent[s] = -2;
+
+  queue<pair<int, long long>> q;
+  q.push({s, INF});
+
+  while (!q.empty()) {
+    int u = q.front().first;
+    long long flow = q.front().second;
+    q.pop();
+
+    for (auto v: adj[u]) {
+      if (res.parent[v] == -1 && capacity[u][v] > 0) {
+        res.parent[v] = u;
+        long long new_flow = min(flow, capacity[u][v]);
+
+        if (v == t) {
+          res.bottleneck = new_flow;
+          return res;
+        }
+        q.push({v, new_flow});
+      }
+    }
+  }
+  return res;
+}
+
+MaxFlow_Result mf_calculate_max_flow(const vector<vector<int>>& adj, const vector<vector<long long>>& capacity, int N, int s, int t) {
+  MaxFlow_Result res;
+  res.max_flow = 0;
+  res.adj = adj;
+  res.residual = capacity;
+  res.parent.assign(N+1, -1);
+  res.reachable.assign(N+1, 0);
+
+  while (true) {
+    BFS_Result step = mf_bfs(res.adj, res.residual, N, s, t);
+
+    // if no augment path available
+    if (step.bottleneck == 0) {
+      res.parent = step.parent;
+      break;
+    }
+
+    res.max_flow += step.bottleneck;
+
+    // going back from t to s + update capacities
+    int curr = t;
+
+    while (curr != s) {
+      int prev = step.parent[curr];
+      res.residual[prev][curr] -= step.bottleneck;
+      res.residual[curr][prev] += step.bottleneck;
+      curr = prev;
+    }
+  }
+
+  // marking the min-cut side coming from source 's'
+  queue<int> q;
+  vector<int> visited(N+1, 0);
+
+  q.push(s);
+  visited[s] = 1;
+
+  while (!q.empty()) {
+    int u = q.front();
+    q.pop();
+
+    res.reachable[u] = 1;
+
+    for (auto v: res.adj[u]) {
+      if (!visited[v] && res.residual[u][v] > 0) {
+        visited[v] = 1;
+        q.push(v);
+      }
+    }
+  }
+
+  return res;
+}
+
+// Max Flow solution
+void mf_solution() {
+  int N, m;
+  cin >> N >> m;
+
+  vector<vector<long long>> capacity(N+1, vector<long long>(N+1, 0));
+  vector<vector<int>> adj(N+1);
+  vector<vector<char>> visited (N+1, vector<char>(N+1, 0)); // to avoid duplicates
+
+  for (int i = 0; i < m; i++) {
+    int a, b;
+    long long c;
+
+    cin >> a >> b >> c;
+
+    capacity[a][b] += c; // merging of parallel edges
+
+    if (!visited[a][b]) {
+      adj[a].push_back(b);
+      visited[a][b] = 1;
+    }
+
+    if (!visited[b][a]) {
+      adj[b].push_back(a);
+      visited[b][a] = 1;
+    }
+  }
+
+  int s = 1;
+  int t = N;
+
+  MaxFlow_Result res = mf_calculate_max_flow(adj, capacity, N, s, t);
+
+  cout << res.max_flow << "\n";
+}
+
 // -----------------------------------------------------------------------------
 // MAIN
 int main() {
@@ -586,6 +721,10 @@ int main() {
 
     case 2:
       huff_sol();
+    break;
+
+    case 3:
+      mf_solution();
     break;
   
     default:
