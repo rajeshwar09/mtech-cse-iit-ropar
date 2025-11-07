@@ -6,11 +6,17 @@
 #include <map>
 #include <unordered_set>
 #include <deque>
+#include <string>
+#include <array>
+#include <limits>
+#include <functional>
 
 using namespace std;
 
 // INF: acts like +infinity during min checks
 const long long INF = 1e15;
+
+// 1. ARBORSCENCE PROBLEM ======================================================
 
 // edge: u -> v with weight w
 struct Edge {
@@ -29,7 +35,7 @@ struct Arborescence_Findings {
   vector<vector<pair<int, long long>>> adj_tree;
 };
 
-// Internal edge used by DMST (0-indexed during algorithm)
+// Internal edge used by DMST (1-indexed during algorithm)
 // u, v: current points in the updated graph
 // w: current edge weight (after updated)
 // orig_u, orig_v: original point
@@ -38,7 +44,6 @@ struct DMST_Edge {
   long long w;
   int orig_u, orig_v;
 };
-
 
 // -----------------------------------------------------------------------------
 // find weight of (u -> v) from given edges
@@ -92,9 +97,9 @@ vector<int> dmst(vector<DMST_Edge>& dmst_edges, int N, int s) {
   // component_id[v]: id ofcomponent v belongs to after detection
   // visited[v]: detect cycle
   // component_count: number of components formed after cycle detection
-  vector<long long> in_weight(N, INF);
-  vector<int> predecessor_label(N, -1);
-  vector<int> predecessor_edge_index(N, -1);
+  vector<long long> in_weight(N+1, INF);
+  vector<int> predecessor_label(N+1, -1);
+  vector<int> predecessor_edge_index(N+1, -1);
 
   // first, pick min incoming edge for every node
   for (int i = 0; i < dmst_edges.size(); i++) {
@@ -114,11 +119,11 @@ vector<int> dmst(vector<DMST_Edge>& dmst_edges, int N, int s) {
   predecessor_edge_index[s] = -1;
 
   int component_count = 0;
-  vector<int> component_id(N, -1);
-  vector<int> visited(N, -1);
+  vector<int> component_id(N+1, -1);
+  vector<int> visited(N+1, -1);
 
   // second, detect cycles among the chosen incoming edges
-  for (int v = 0; v < N; v++) {
+  for (int v = 1; v <= N; v++) {
     // follow predecessor edge till souce is found, chnage visited[u] value to v
     int u = v;
     while (visited[u] != v && component_id[u] == -1 && u != s && predecessor_label[u] != -1) {
@@ -139,13 +144,16 @@ vector<int> dmst(vector<DMST_Edge>& dmst_edges, int N, int s) {
   if (component_count == 0) return predecessor_edge_index;
 
   // assign id to non-cycle nodes
-  for (int i = 0; i < N; i++) {
+  for (int i = 1; i <= N; i++) {
     if (component_id[i] == -1) {
       component_id[i] = component_count++;
     }
   }
 
-  // Update source in the new graph
+  // Update source in the new graph + 1-indexing
+  for (int i = 1; i <= N; i++) {
+    component_id[i] = component_id[i] + 1;
+  }
   int new_source = component_id[s];
 
   // create new graph with adjusted weights
@@ -170,9 +178,9 @@ vector<int> dmst(vector<DMST_Edge>& dmst_edges, int N, int s) {
 
   // Map contracted choices back to current level:
   // entry_edge_index[i]: index in dmst_edges that enters component i
-  vector<int> entry_edge_index(component_count, -1);
+  vector<int> entry_edge_index(component_count + 1, -1);
 
-  for (int i = 0; i < component_count; i++) {
+  for (int i = 1; i <= component_count; i++) {
     int new_index = component_incoming_edge[i];
     if (new_index == -1) continue;
 
@@ -198,12 +206,12 @@ vector<int> dmst(vector<DMST_Edge>& dmst_edges, int N, int s) {
   }
 
   // replaceing one edge per cycle with entering edge
-  vector<int> result(N, -1);
-  for (int v = 0; v < N; v++) {
+  vector<int> result(N+1, -1);
+  for (int v = 1; v <= N; v++) {
     result[v] = predecessor_edge_index[v];
   }
 
-  for (int i = 0; i < component_count; i++) {
+  for (int i = 1; i <= component_count; i++) {
     if (i == new_source) continue;
     int edge_index = entry_edge_index[i];
 
@@ -242,19 +250,16 @@ Arborescence_Findings min_arborescence(const vector<Edge>& edges, int N, int s) 
   for (size_t i = 0; i < min_edges_set.size(); i++) {
     const Edge &e = min_edges_set[i];
     DMST_Edge de;
-    de.u = e.u - 1;
-    de.v = e.v - 1;
+    de.u = e.u;
+    de.v = e.v;
     de.w = e.w;
     de.orig_u = e.u;
     de.orig_v = e.v;
     edge_list.push_back(de);
   }
 
-  int n_0 = N;
-  int s_0 = s - 1;
-
   // 4 running DMST on 0-index to chose incoming edge index for every vertex
-  vector<int> chosen_index = dmst(edge_list, n_0, s_0);
+  vector<int> chosen_index = dmst(edge_list, N, s);
 
   vector<int> parent(N+1, -1);
   parent[s] = 0;
@@ -263,7 +268,7 @@ Arborescence_Findings min_arborescence(const vector<Edge>& edges, int N, int s) 
   long long total_cost = 0;
 
   // 5 convert chosen edges back to original graph and compute total cost
-  for (int v = 0; v < n_0; v++) {
+  for (int v = 1; v <= N; v++) {
     int index = chosen_index[v];
     if (index == -1) continue;
 
@@ -378,6 +383,196 @@ void arb_solution() {
   }
 }
 
+// =============================================================================
+
+// 2. HUFFMAN ==================================================================
+
+// to build tree
+struct Huff_Node {
+  char ch;
+  long long freq;
+  Huff_Node* left;
+  Huff_Node* right;
+  char min_char;
+  bool is_leaf;
+};
+
+// custom huffman comparator - 1st with freq otherwise with smaller char
+bool huff_compare_nodes(const Huff_Node* a, const Huff_Node* b) {
+  if (a->freq != b->freq) {
+    return a->freq > b->freq;
+  }
+  return a->min_char > b->min_char;
+}
+
+// counting the frequency
+map<char, long long> huff_freq(const string& s) {
+  map<char, long long> freq;
+  for (char ch: s) {
+    freq[ch]++;
+  }
+
+  return freq;
+}
+
+// huffman tree
+Huff_Node* huff_build_tree(const map<char, long long>& freq) {
+  priority_queue<Huff_Node*, vector<Huff_Node*>, std::function<bool(const Huff_Node*, const Huff_Node*)>> pq(huff_compare_nodes);
+
+  for (auto& key_val: freq) {
+    Huff_Node* n = new Huff_Node();
+    n->ch = key_val.first;
+    n->freq = key_val.second;
+    n->left = nullptr;
+    n->right = nullptr;
+    n->min_char = key_val.first;
+    n->is_leaf = true;
+
+    pq.push(n);
+  }
+
+  // if only we have single char
+  if (pq.size() == 1) {
+    return pq.top();
+  }
+
+  // merging
+  while (pq.size() > 1) {
+    Huff_Node* a = pq.top();
+    pq.pop();
+    Huff_Node* b = pq.top();
+    pq.pop();
+
+    // putting lexicographic smaller tree on left
+    if (a->min_char > b->min_char) {
+      swap(a, b);
+    }
+
+    Huff_Node* p = new Huff_Node();
+    p->ch = '\0';
+    p->freq = a->freq + b->freq;
+    p->left = a;
+    p->right = b;
+    p->min_char = min(a->min_char, b->min_char);
+    p->is_leaf = false;
+
+    pq.push(p);
+  }
+
+  return pq.empty() ? nullptr : pq.top();
+}
+
+// using dfs logic to create coding
+void huff_dfs(Huff_Node* node, string& path, array<string, 256>& code_of) {
+  if (!node) return;
+  if (node->is_leaf) {
+    if (path.empty()) {
+      code_of[(unsigned char)node->ch] = "0"; // only 1 char
+    } else {
+      code_of[(unsigned char)node->ch] = path;
+    }
+    return;
+  }
+
+  path.push_back('0');
+  huff_dfs(node->left, path, code_of);
+  path.pop_back();
+
+  path.push_back('1');
+  huff_dfs(node->right, path, code_of);
+  path.pop_back();
+}
+
+array<string, 256> huff_build_codes(Huff_Node* root) {
+  array<string, 256> code_of;
+  for (auto& s: code_of) s.clear();
+  
+  string path;
+  huff_dfs(root, path, code_of);
+  
+  return code_of;
+}
+
+// encoding
+string huff_encode(const string& s, const array<string, 256>& code_of) {
+  string encoded;
+  encoded.reserve(s.size());
+  
+  for (char ch: s) {
+    encoded += code_of[(unsigned char)ch];
+  }
+
+  return encoded;
+}
+
+// decoding
+string huff_decode(const string& bits, Huff_Node* root) {
+  if (!root) return "";
+  if (root->is_leaf) return string(bits.size(), root->ch);
+
+  string decoded;
+  Huff_Node* curr = root;
+
+  for (char b: bits) {
+    curr = (b == '0') ? curr->left : curr->right;
+
+    if (curr->is_leaf) {
+      decoded.push_back(curr->ch);
+      curr = root;
+    }
+  }
+
+  return decoded;
+}
+
+// free memory
+void huff_free(Huff_Node* node) {
+  if (!node) return;
+  huff_free(node->left);
+  huff_free(node->right);
+  delete node;
+}
+
+// print huffman output
+void huff_print(const map<char, long long>& freq, const array<string, 256>& code_of, const string& encoded, const string& decoded) {
+  cout << "Codes:\n";
+  for (auto& key_val: freq) {
+    char c = key_val.first;
+    cout << c << ": " << code_of[(unsigned char)c] << "\n";
+  }
+
+  cout << "Encoded: " << encoded << "\n";
+  cout << "Decoded: " << decoded << "\n\n";
+}
+
+// huffman solution
+void huff_sol() {
+  int T;
+  cin >> T;
+  string temp;
+  getline(cin, temp);
+
+  for (int t = 0; t < T; t++) {
+    string s;
+    getline(cin, s);
+
+    map<char, long long> freq = huff_freq(s);
+
+    Huff_Node* root = nullptr;
+    if (!freq.empty()) {
+      root = huff_build_tree(freq);
+    }
+
+    array<string, 256> code_of = huff_build_codes(root);
+    string encoded = huff_encode(s, code_of);
+    string decoded = huff_decode(encoded, root);
+
+    huff_print(freq, code_of, encoded, decoded);
+    huff_free(root);
+  }
+}
+
+
 // -----------------------------------------------------------------------------
 // MAIN
 int main() {
@@ -387,6 +582,10 @@ int main() {
   switch (query_id) {
     case 1: 
       arb_solution();
+    break;
+
+    case 2:
+      huff_sol();
     break;
   
     default:
